@@ -2,6 +2,22 @@
 
 工会职工档案系统是一款面向工会组织的无纸化办公平台，旨在解决传统纸质入会申请、会费授权管理、困难职工帮扶及爱心互助等业务流程效率低下、难以管理的问题。系统涵盖工会会员管理、困难帮扶申请审批、爱心互助会管理、爱心帮扶等核心业务，支持两级审核流程（基层审核 → 委员会审核），提供电子签名、批量导入、统计分析等实用功能。
 
+> 📖 **更详细的使用说明、操作步骤和业务流程**请查阅 [USAGE.md](./USAGE.md)（系统安装、各模块操作、数据库结构、部署指南、FAQ 排查）。
+> 📐 **需求与技术架构**请查阅 `.trae/documents/PRD.md` 和 `.trae/documents/TechnicalArchitecture.md`。
+
+## 目录
+
+- [功能特性](#功能特性)
+- [技术栈](#技术栈)
+- [项目结构](#项目结构)
+- [快速开始](#快速开始)
+- [默认账户](#默认账户)
+- [API 接口文档](#api-接口文档)
+- [业务规则](#业务规则)
+- [开发指南](#开发指南)
+- [常见问题](#常见问题)
+- [许可证](#许可证)
+
 ## 功能特性
 
 ### 1. 工会会员管理
@@ -62,28 +78,33 @@
 
 ## 技术栈
 
-- **前端**: React 18 + TypeScript + TailwindCSS 3
-- **后端**: Express 4 + TypeScript (ESM模块)
-- **数据库**: PostgreSQL >= 14
-- **状态管理**: Zustand
-- **路由**: React Router DOM
-- **认证**: JWT + bcryptjs
-- **图表**: Chart.js + react-chartjs-2
+- **前端**: React 18.3 + TypeScript 5.8 + TailwindCSS 3.4
+- **后端**: Express 4.21 + TypeScript 5.8（ESM 模块）
+- **数据库**: PostgreSQL >= 14（驱动 `pg` 8.22）
+- **状态管理**: Zustand 5
+- **路由**: React Router DOM 7
+- **认证**: JWT（jsonwebtoken 9）+ bcryptjs 3
+- **图表**: Chart.js 4 + react-chartjs-2 5
 - **图标**: Lucide React
-- **构建工具**: Vite 6
-- **文件上传**: Multer
+- **样式工具**: clsx + tailwind-merge
+- **构建工具**: Vite 6 + tsx（后端运行）
+- **文件上传**: Multer 2
 - **Excel处理**: xlsx 0.18.5
+- **跨域/配置**: cors + dotenv
 
 ## 项目结构
 
 ```
 union-staff-archive-system/
 ├── .trae/documents/          # PRD和技术架构文档
-├── api/                      # 后端代码
+│   ├── PRD.md                # 产品需求文档
+│   └── TechnicalArchitecture.md # 技术架构文档
+├── api/                      # 后端代码（Express + TypeScript ESM）
 │   ├── config/               # 数据库连接和JWT配置
 │   │   ├── database.ts       # PostgreSQL连接池配置
-│   │   ├── jwt.ts            # JWT生成与验证
-│   │   └── middleware/auth.ts # 认证中间件
+│   │   └── jwt.ts            # JWT生成与验证
+│   ├── middleware/
+│   │   └── auth.ts           # 认证中间件（JWT校验、角色判断、模块权限）
 │   ├── routes/               # API路由
 │   │   ├── auth.ts           # 认证相关接口
 │   │   ├── membership.ts     # 入会申请接口
@@ -96,23 +117,46 @@ union-staff-archive-system/
 │   │   ├── tasks.ts          # 审核任务接口
 │   │   └── logs.ts           # 系统日志接口
 │   ├── database/             # 数据库脚本
-│   │   ├── init.sql          # 数据库初始化脚本
-│   │   └── reset.sql         # 数据库重置脚本
-│   ├── models/               # 数据模型
-│   ├── uploads/              # 上传文件存储
-│   ├── app.ts                # Express应用配置
-│   ├── index.ts              # 应用入口
-│   └── server.ts             # 服务器启动
-├── src/                      # 前端代码
+│   │   ├── init.sql          # 数据库初始化脚本（建表+初始数据+默认用户）
+│   │   ├── reset.sql         # 数据库重置脚本
+│   │   ├── add_mutual_aid_difficulty.sql # 迁移：创建爱心帮扶申请表
+│   │   ├── test-logs.sql     # 日志测试数据
+│   │   └── migrations/       # 增量迁移脚本
+│   │       └── add_marked_as_audited.sql # 迁移：添加 marked_as_audited 字段
+│   ├── models/               # 数据模型与类型定义
+│   ├── uploads/              # 上传文件存储（证明材料等）
+│   ├── app.ts                # Express应用配置（CORS、路由挂载）
+│   ├── index.ts              # 应用入口（路由汇总导出）
+│   └── server.ts             # 服务器启动（监听端口）
+├── src/                      # 前端代码（React + Vite）
+│   ├── assets/               # 静态资源（图片、svg）
 │   ├── components/           # 通用组件
 │   │   ├── Layout.tsx        # 主布局组件
 │   │   ├── LoginForm.tsx     # 登录表单
 │   │   ├── SignaturePad.tsx  # 电子签名组件
 │   │   ├── DataTable.tsx     # 数据表格组件
-│   │   └── ...               # 其他通用组件
+│   │   ├── Modal.tsx         # 模态弹窗组件
+│   │   ├── ConfirmDialog.tsx # 确认对话框
+│   │   ├── Toast.tsx         # 全局提示组件
+│   │   ├── StatCard.tsx      # 统计卡片
+│   │   ├── Empty.tsx         # 空状态
+│   │   ├── DateTimePicker.tsx # 日期时间选择
+│   │   ├── AuditResultSelector.tsx # 审核结果选择器
+│   │   ├── QuickOpinionButtons.tsx # 快捷审核意见按钮
+│   │   └── DifficultyAudit.tsx    # 困难帮扶审核通用组件
+│   ├── context/
+│   │   └── ToastContext.tsx  # 全局 Toast 上下文
+│   ├── hooks/
+│   │   └── useTheme.ts       # 主题切换 Hook（明/暗）
+│   ├── lib/
+│   │   ├── api.ts            # 统一 API 封装（fetch + JWT）
+│   │   └── utils.ts          # 通用工具函数
+│   ├── store/
+│   │   └── auth.ts           # 认证状态管理（Zustand）
 │   ├── pages/                # 页面组件
 │   │   ├── Login.tsx         # 登录页
 │   │   ├── Register.tsx      # 注册页
+│   │   ├── ForgotPassword.tsx # 忘记密码页
 │   │   ├── Home.tsx          # 首页仪表盘
 │   │   ├── Profile.tsx       # 个人资料页
 │   │   ├── MembershipApply.tsx   # 入会申请页
@@ -129,17 +173,25 @@ union-staff-archive-system/
 │   │   ├── UserManagement.tsx    # 用户管理页
 │   │   ├── Tasks.tsx             # 审核任务页
 │   │   ├── Statistics.tsx        # 统计报表页
-│   │   ├── Logs.tsx              # 系统日志页
-│   │   └── ForgotPassword.tsx    # 忘记密码页
-│   ├── store/auth.ts         # 认证状态管理
-│   ├── lib/api.ts            # API封装
-│   ├── context/              # React Context
-│   ├── hooks/                # 自定义Hooks
-│   └── App.tsx               # 应用入口
+│   │   └── Logs.tsx              # 系统日志页
+│   ├── App.tsx               # 应用入口（路由配置、布局组合）
+│   ├── main.tsx              # React 挂载入口
+│   └── index.css             # 全局样式（Tailwind 入口）
 ├── public/                   # 静态资源
-├── .env                      # 环境变量配置
+├── .env                      # 环境变量配置（端口、数据库、JWT）
+├── .gitignore
+├── .npmrc                    # pnpm 镜像/配置
+├── eslint.config.js          # ESLint 配置
+├── nodemon.json              # 后端开发热重载配置
 ├── package.json              # 项目配置
-└── vite.config.ts            # Vite配置
+├── pnpm-lock.yaml            # 依赖锁定文件
+├── postcss.config.js         # PostCSS 配置
+├── tailwind.config.js        # TailwindCSS 配置
+├── tsconfig.json             # TypeScript 配置
+├── vercel.json               # Vercel 部署配置
+├── vite.config.ts            # Vite 配置（含 /api 代理）
+├── USAGE.md                  # 详细使用文档
+└── README.md
 ```
 
 ## 快速开始
@@ -331,7 +383,7 @@ pnpm run build
   "bank_account": "6222...",               // 银行账号
   "bank_name": "工商银行",                 // 开户行
   "bank_account_name": "张三",             // 账户名
-  "create_mutual_aid": false              // 是否同步创建爱心帮扶申请
+  "create_mutual_aid": false               // 是否同步创建爱心帮扶申请
 }
 ```
 
@@ -494,14 +546,43 @@ pnpm run build
 ### 可用命令
 
 ```bash
-pnpm run dev           # 启动前后端开发服务器
-pnpm run client:dev    # 仅启动前端开发服务器
-pnpm run server:dev    # 仅启动后端开发服务器
-pnpm run build         # 生产构建（类型检查 + Vite 构建）
-pnpm run check         # TypeScript 类型检查
+pnpm run dev           # 启动前后端开发服务器（concurrently 并行）
+pnpm run client:dev    # 仅启动前端开发服务器（Vite，默认 5173）
+pnpm run server:dev    # 仅启动后端开发服务器（nodemon + tsx，默认 3001）
+pnpm run build         # 生产构建（tsc 类型检查 + Vite 构建）
+pnpm run check         # TypeScript 类型检查（不输出文件）
 pnpm run lint          # ESLint 代码检查
 pnpm run preview       # 预览生产构建
 ```
+
+### 开发模式说明
+
+- **前后端并行启动**：`pnpm run dev` 使用 `concurrently` 同时拉起 Vite 与 nodemon，前端访问 http://localhost:5173，后端监听 http://localhost:3001。
+- **后端热重载**：由 `nodemon.json` 配置，监听 `api/` 目录下的 `.ts/.mts/.js/.json` 文件变化，使用 `tsx api/server.ts` 执行，`delay: 1000` 防抖。
+- **前端 API 代理**：`vite.config.ts` 中配置了 `/api` 代理到 `http://localhost:3001`，前端代码可直接以 `/api/...` 相对路径调用后端，避免开发态 CORS 问题。如自定义后端端口，请同步修改代理 `target`。
+- **路径别名**：通过 `vite-tsconfig-paths` 插件读取 `tsconfig.json` 的 `paths` 配置，支持 `@/...` 等别名导入。
+
+### Vercel 部署
+
+项目根目录提供 `vercel.json`，已配置 SPA 重写规则，将 `/api/(.*)` 路由到 Serverless Function `api/index`，其余路径回退到 `index.html`：
+
+```json
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
+```
+
+部署步骤：
+1. Fork/导入仓库到 Vercel
+2. 在 Vercel 项目设置中配置环境变量（与 `.env` 一致：`PORT`、`DB_*`、`JWT_SECRET`）
+3. 框架预设选择 **Vite**，构建命令 `pnpm run build`，输出目录 `dist`
+4. 数据库需使用外部 PostgreSQL 服务（如 Vercel Postgres / Supabase / Neon），并将连接串配置到 `DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD`
+5. 部署完成后访问域名即可使用，首次部署需在外部数据库执行 `api/database/init.sql`
+
+> ⚠️ Vercel Serverless 函数无本地文件系统持久化，`api/uploads/` 中的上传文件需迁移到对象存储（如 S3/OSS）后修改上传逻辑。
 
 ### 数据库脚本
 
